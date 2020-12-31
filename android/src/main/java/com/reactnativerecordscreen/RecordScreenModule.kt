@@ -84,6 +84,13 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
       hbRecorder!!.setVideoEncoder("DEFAULT");
     }
     hbRecorder!!.isAudioEnabled(mic);
+    hbRecorder!!.enableCustomSettings();
+    if (readableMap.hasKey("videoFrameRate")){
+      hbRecorder!!.setVideoFrameRate(readableMap.getInt("videoFrameRate"));
+    }
+    if (readableMap.hasKey("videoBitrate")){
+      hbRecorder!!.setVideoBitrate(readableMap.getInt("videoBitrate"));
+    }
     reactApplicationContext.addActivityEventListener(mActivityEventListener);
   }
 
@@ -119,7 +126,13 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
   @ReactMethod
   fun clean(promise: Promise) {
     println("clean");
-    outputUri!!.delete();
+    val files = outputUri!!.listFiles()
+    for (i in files.indices) {
+      if (files[i].isFile()) {
+        val photoFile = File(files[i].getPath())
+        photoFile.delete()
+      }
+    }
     promise.resolve("cleaned");
   }
 
