@@ -58,6 +58,16 @@ RCT_EXPORT_METHOD(setup: (NSDictionary *)config)
     self.screenWidth = [RCTConvert int: config[@"width"]];
     self.screenHeight = [RCTConvert int: config[@"height"]];
     self.enableMic = [RCTConvert BOOL: config[@"mic"]];
+    if ([config objectForKey:@"videoFrameRate"]) {
+        self.videoFrameRate = [config[@"videoFrameRate"] intValue];
+    }else{
+        self.videoFrameRate = 60;
+    }
+    if ([config objectForKey:@"videoBitrate"]) {
+        self.videoBitrate = [config[@"videoBitrate"] intValue];
+    }else{
+        self.videoBitrate = 1920 * 1080 * 11.4;
+    }
 }
 
 RCT_REMAP_METHOD(startRecording, resolve:(RCTPromiseResolveBlock)resolve rejecte:(RCTPromiseRejectBlock)reject)
@@ -91,8 +101,8 @@ RCT_REMAP_METHOD(startRecording, resolve:(RCTPromiseResolveBlock)resolve rejecte
     
     NSDictionary *compressionProperties = @{AVVideoProfileLevelKey         : AVVideoProfileLevelH264HighAutoLevel,
                                             AVVideoH264EntropyModeKey      : AVVideoH264EntropyModeCABAC,
-                                            AVVideoAverageBitRateKey       : @(1920 * 1080 * 114),
-                                            AVVideoMaxKeyFrameIntervalKey  : @60,
+                                            AVVideoAverageBitRateKey       : @(self.videoBitrate),
+                                            AVVideoMaxKeyFrameIntervalKey  : @(self.videoFrameRate),
                                             AVVideoAllowFrameReorderingKey : @NO};
 
     NSLog(@"width: %d", [self adjustMultipleOf2:self.screenWidth]);
