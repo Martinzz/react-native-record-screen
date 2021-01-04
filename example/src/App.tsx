@@ -10,7 +10,7 @@ import {
   TouchableHighlight,
   Button,
 } from 'react-native';
-import Video from 'react-native-video';
+// import Video from 'react-native-video';
 import RecordScreen from 'react-native-record-screen';
 
 export default function App() {
@@ -136,12 +136,12 @@ export default function App() {
       </View>
       {uri ? (
         <View style={styles.preview}>
-          <Video
-            source={{
-              uri,
-            }}
-            style={styles.video}
-          />
+          {/*<Video*/}
+          {/*  source={{*/}
+          {/*    uri,*/}
+          {/*  }}*/}
+          {/*  style={styles.video}*/}
+          {/*/>*/}
         </View>
       ) : null}
     </>
