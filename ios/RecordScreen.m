@@ -1,6 +1,8 @@
 #import "RecordScreen.h"
 #import <React/RCTConvert.h>
 
+static NSString *const RCTStorageDirectory = @"ReactNativeRecordScreen";
+
 @implementation RecordScreen
 
 const int DEFAULT_FPS = 30;
@@ -68,6 +70,21 @@ RCT_EXPORT_METHOD(setup: (NSDictionary *)config)
     }else{
         self.videoBitrate = 1920 * 1080 * 11.4;
     }
+    NSError *error = nil;
+    NSString *path = [self getDir];
+    NSFileManager *fm = [NSFileManager defaultManager];
+    if (![fm fileExistsAtPath:path]) {
+        [fm createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:&error];
+        if(error){
+           NSLog(@"createDirectoryAtPath: %@", error);
+        }
+    }
+}
+-(NSString*)getDir
+{
+    NSArray *pathDocuments = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *outputURL = pathDocuments[0];
+    return [outputURL stringByAppendingPathComponent:RCTStorageDirectory];
 }
 
 RCT_REMAP_METHOD(startRecording, resolve:(RCTPromiseResolveBlock)resolve rejecte:(RCTPromiseRejectBlock)reject)
@@ -79,9 +96,7 @@ RCT_REMAP_METHOD(startRecording, resolve:(RCTPromiseResolveBlock)resolve rejecte
     
     self.encounteredFirstBuffer = NO;
     
-    NSArray *pathDocuments = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString *outputURL = pathDocuments[0];
-
+    NSString *outputURL = [self getDir];
     NSString *videoOutPath = [[outputURL stringByAppendingPathComponent:[NSString stringWithFormat:@"%u", arc4random() % 1000]] stringByAppendingPathExtension:@"mp4"];
     
     NSError *error;
@@ -175,11 +190,16 @@ RCT_REMAP_METHOD(startRecording, resolve:(RCTPromiseResolveBlock)resolve rejecte
                             }
                         }
                     } completionHandler:^(NSError* error) {
-                        NSLog(@"startCapture: %@", error);
-                        resolve(@"started");
+                        if(error != nil){
+                            NSLog(@"startCapture: %@", error);
+                            reject(@(error.code).stringValue, error.localizedDescription, error);
+                        }else{
+                            resolve(@"started");
+                        }
                     }];
                 } else {
                     // Fallback on earlier versions
+                    reject(@"1", @"Currently only supports iOS version 11 or higher", nil);
                 }
             } else {
                 NSError* err = nil;
@@ -227,9 +247,7 @@ RCT_REMAP_METHOD(clean,
                  cleanResolve:(RCTPromiseResolveBlock)resolve
                  cleanRejecte:(RCTPromiseRejectBlock)reject)
 {
-
-    NSArray *pathDocuments = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString *path = pathDocuments[0];
+    NSString *path = [self getDir];
     [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
     resolve(@"cleaned");
 }
