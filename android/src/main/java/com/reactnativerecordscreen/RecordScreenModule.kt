@@ -60,7 +60,6 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
       } else {
         startPromise!!.reject("404", "cancel!");
       }
-      startPromise!!.resolve(true);
     }
   }
 
@@ -138,6 +137,7 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
 
   override fun HBRecorderOnStart() {
     println("HBRecorderOnStart")
+    startPromise!!.resolve(true);
   }
 
   override fun HBRecorderOnComplete() {
@@ -157,6 +157,7 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
     println(errorCode)
     println("reason")
     println(reason)
+    startPromise!!.reject(errorCode.toString(), reason)
   }
 
   private fun doesSupportEncoder(encoder: String): Boolean {
