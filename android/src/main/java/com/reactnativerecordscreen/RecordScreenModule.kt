@@ -17,7 +17,6 @@ import java.io.File
 import java.io.IOException
 import kotlin.math.ceil
 
-
 class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext), HBRecorderListener {
 
   private var hbRecorder: HBRecorder? = null;
@@ -47,19 +46,16 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
 
   private val mActivityEventListener: ActivityEventListener = object : BaseActivityEventListener() {
     override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, intent: Intent?) {
-      println("resultCode")
-      println(resultCode)
-      println("AppCompatActivity.RESULT_OK")
-      println(AppCompatActivity.RESULT_OK)
       if (requestCode == SCREEN_RECORD_REQUEST_CODE) {
         if (resultCode == AppCompatActivity.RESULT_OK) {
-          hbRecorder!!.startScreenRecording(intent, resultCode, Activity());
+          hbRecorder!!.startScreenRecording(intent, resultCode);
         } else {
-          startPromise!!.reject("404", "cancel!!");
+          startPromise!!.resolve("permission_error");
         }
       } else {
         startPromise!!.reject("404", "cancel!");
       }
+      startPromise!!.resolve("started");
     }
   }
 
@@ -75,21 +71,30 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
     screenWidth = if (readableMap.hasKey("width")) ceil(readableMap.getDouble("width")).toInt() else 0;
     screenHeight = if (readableMap.hasKey("height")) ceil(readableMap.getDouble("height")).toInt() else 0;
     mic =  if (readableMap.hasKey("mic")) readableMap.getBoolean("mic") else true;
+
     hbRecorder = HBRecorder(reactApplicationContext, this);
     hbRecorder!!.setOutputPath(outputUri.toString());
-    if(doesSupportEncoder("h264")){
+
+    // For FPS and bitrate we need to enable custom settings
+    if (readableMap.hasKey("fps") || readableMap.hasKey("bitrate")) {
+      hbRecorder!!.enableCustomSettings();
+
+      if (readableMap.hasKey("fps")) {
+        val fps = readableMap.getInt("fps");
+        hbRecorder!!.setVideoFrameRate(fps);
+      }
+      if (readableMap.hasKey("bitrate")) {
+        val bitrate = readableMap.getInt("bitrate");
+        hbRecorder!!.setVideoBitrate(bitrate);
+      }
+    }
+
+    if (doesSupportEncoder("h264")) {
       hbRecorder!!.setVideoEncoder("H264");
-    }else{
+    } else {
       hbRecorder!!.setVideoEncoder("DEFAULT");
     }
     hbRecorder!!.isAudioEnabled(mic);
-    hbRecorder!!.enableCustomSettings();
-    if (readableMap.hasKey("videoFrameRate")){
-      hbRecorder!!.setVideoFrameRate(readableMap.getInt("videoFrameRate"));
-    }
-    if (readableMap.hasKey("videoBitrate")){
-      hbRecorder!!.setVideoBitrate(readableMap.getInt("videoBitrate"));
-    }
     reactApplicationContext.addActivityEventListener(mActivityEventListener);
   }
 
@@ -124,31 +129,27 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
 
   @ReactMethod
   fun clean(promise: Promise) {
-    println("clean");
-    val files = outputUri!!.listFiles()
-    for (i in files.indices) {
-      if (files[i].isFile()) {
-        val photoFile = File(files[i].getPath())
-        photoFile.delete()
-      }
-    }
+    println("clean!!");
+    println(outputUri);
+    outputUri!!.delete();
     promise.resolve("cleaned");
   }
 
   override fun HBRecorderOnStart() {
     println("HBRecorderOnStart")
-    startPromise!!.resolve(true);
   }
 
   override fun HBRecorderOnComplete() {
     println("HBRecorderOnComplete")
-    var uri = hbRecorder!!.filePath;
-    val response = WritableNativeMap();
-    val result =  WritableNativeMap();
-    result.putString("outputURL", uri);
-    response.putString("status", "success");
-    response.putMap("result", result);
-    stopPromise!!.resolve(response);
+    if (stopPromise != null) {
+      val uri = hbRecorder!!.filePath;
+      val response = WritableNativeMap();
+      val result = WritableNativeMap();
+      result.putString("outputURL", uri);
+      response.putString("status", "success");
+      response.putMap("result", result);
+      stopPromise!!.resolve(response);
+    }
   }
 
   override fun HBRecorderOnError(errorCode: Int, reason: String?) {
@@ -157,18 +158,24 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
     println(errorCode)
     println("reason")
     println(reason)
-    startPromise!!.reject(errorCode.toString(), reason)
+  }
+
+  override fun HBRecorderOnPause() {
+    println("HBRecorderOnPause")
+  }
+
+  override fun HBRecorderOnResume() {
+    println("HBRecorderOnResume")
   }
 
   private fun doesSupportEncoder(encoder: String): Boolean {
-    val numCodecs = MediaCodecList.getCodecCount()
-    for (i in 0 until numCodecs) {
-      val codecInfo = MediaCodecList.getCodecInfoAt(i)
+    val list = MediaCodecList(MediaCodecList.ALL_CODECS).codecInfos
+    val size = list.size
+    for (i in 0 until size) {
+      val codecInfo = list[i]
       if (codecInfo.isEncoder) {
-        if (codecInfo.name != null) {
-          if (codecInfo.name.contains(encoder)) {
-            return true
-          }
+        if (codecInfo!!.name.contains(encoder)) {
+          return true
         }
       }
     }
