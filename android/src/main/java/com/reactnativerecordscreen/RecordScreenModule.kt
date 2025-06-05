@@ -49,13 +49,13 @@ class RecordScreenModule(reactContext: ReactApplicationContext) : ReactContextBa
       if (requestCode == SCREEN_RECORD_REQUEST_CODE) {
         if (resultCode == AppCompatActivity.RESULT_OK) {
           hbRecorder!!.startScreenRecording(intent, resultCode);
+          startPromise!!.resolve("started");
         } else {
-          startPromise!!.resolve("permission_error");
+          startPromise!!.reject("permission_error");
         }
       } else {
         startPromise!!.reject("404", "cancel!");
       }
-      startPromise!!.resolve("started");
     }
   }
 
